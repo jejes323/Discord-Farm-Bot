@@ -15,14 +15,37 @@ function initDatabase() {
         )
     `);
 
-    // 씨앗 데이터 테이블
+    // 밭 소유권 테이블
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS fields (
+            user_id TEXT NOT NULL,
+            field_id INTEGER NOT NULL,
+            is_owned INTEGER DEFAULT 0,
+            PRIMARY KEY (user_id, field_id),
+            FOREIGN KEY (user_id) REFERENCES user_info(user_id)
+        )
+    `);
+
+    // 씨앗 데이터 테이블 (field_id 추가)
     db.exec(`
         CREATE TABLE IF NOT EXISTS seeds (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id TEXT NOT NULL,
+            field_id INTEGER,
             seed_name TEXT NOT NULL,
             plant_time INTEGER NOT NULL,
             sell_price INTEGER NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES user_info(user_id)
+        )
+    `);
+
+    // 인벤토리 테이블
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS inventory (
+            user_id TEXT NOT NULL,
+            item_name TEXT NOT NULL,
+            quantity INTEGER DEFAULT 0,
+            PRIMARY KEY (user_id, item_name),
             FOREIGN KEY (user_id) REFERENCES user_info(user_id)
         )
     `);
@@ -39,7 +62,19 @@ const userInfo = {
 
         if (!user) {
             const insert = db.prepare('INSERT INTO user_info (user_id, balance) VALUES (?, 0)');
-            insert.run(userId);
+            const insertField = db.prepare('INSERT INTO fields (user_id, field_id, is_owned) VALUES (?, ?, ?)');
+
+            const transaction = db.transaction(() => {
+                insert.run(userId);
+                // 기본적으로 1번 밭 지급
+                insertField.run(userId, 1, 1);
+                // 2~5번 밭은 미보유 상태로 초기화
+                for (let i = 2; i <= 5; i++) {
+                    insertField.run(userId, i, 0);
+                }
+            });
+            transaction();
+
             user = { user_id: userId, balance: 0 };
         }
 
@@ -74,14 +109,74 @@ const userInfo = {
     }
 };
 
+// 인벤토리 관련 함수들
+const inventory = {
+    // 아이템 추가
+    addItem: (userId, itemName, quantity) => {
+        userInfo.getOrCreate(userId);
+        const stmt = db.prepare(`
+            INSERT INTO inventory (user_id, item_name, quantity) 
+            VALUES (?, ?, ?) 
+            ON CONFLICT(user_id, item_name) 
+            DO UPDATE SET quantity = quantity + ?
+        `);
+        stmt.run(userId, itemName, quantity, quantity);
+    },
+
+    // 아이템 제거 (사용)
+    removeItem: (userId, itemName, quantity) => {
+        const stmt = db.prepare('UPDATE inventory SET quantity = quantity - ? WHERE user_id = ? AND item_name = ?');
+        stmt.run(quantity, userId, itemName);
+
+        // 수량이 0 이하면 삭제
+        const clean = db.prepare('DELETE FROM inventory WHERE user_id = ? AND item_name = ? AND quantity <= 0');
+        clean.run(userId, itemName);
+    },
+
+    // 아이템 수량 조회
+    getItemCount: (userId, itemName) => {
+        const stmt = db.prepare('SELECT quantity FROM inventory WHERE user_id = ? AND item_name = ?');
+        const result = stmt.get(userId, itemName);
+        return result ? result.quantity : 0;
+    },
+
+    // 모든 아이템 조회
+    getUserInventory: (userId) => {
+        const stmt = db.prepare('SELECT * FROM inventory WHERE user_id = ? AND quantity > 0');
+        return stmt.all(userId);
+    }
+};
+
+// 밭 관련 함수들
+const fields = {
+    // 사용자의 모든 밭 상태 조회
+    getUserFields: (userId) => {
+        userInfo.getOrCreate(userId); // 사용자가 없으면 생성
+        const stmt = db.prepare(`
+            SELECT f.field_id, f.is_owned, s.seed_name 
+            FROM fields f 
+            LEFT JOIN seeds s ON f.user_id = s.user_id AND f.field_id = s.field_id 
+            WHERE f.user_id = ? 
+            ORDER BY f.field_id ASC
+        `);
+        return stmt.all(userId);
+    },
+
+    // 밭 구매 (소유권 획득)
+    buyField: (userId, fieldId) => {
+        const stmt = db.prepare('UPDATE fields SET is_owned = 1 WHERE user_id = ? AND field_id = ?');
+        stmt.run(userId, fieldId);
+    }
+};
+
 // 씨앗 데이터 관련 함수들
 const seeds = {
     // 씨앗 심기
-    plant: (userId, seedName, sellPrice) => {
+    plant: (userId, fieldId, seedName, sellPrice) => {
         userInfo.getOrCreate(userId);
         const plantTime = Date.now();
-        const stmt = db.prepare('INSERT INTO seeds (user_id, seed_name, plant_time, sell_price) VALUES (?, ?, ?, ?)');
-        const result = stmt.run(userId, seedName, plantTime, sellPrice);
+        const stmt = db.prepare('INSERT INTO seeds (user_id, field_id, seed_name, plant_time, sell_price) VALUES (?, ?, ?, ?, ?)');
+        const result = stmt.run(userId, fieldId, seedName, plantTime, sellPrice);
         return result.lastInsertRowid;
     },
 
@@ -123,5 +218,7 @@ initDatabase();
 module.exports = {
     db,
     userInfo,
-    seeds
+    fields,
+    seeds,
+    inventory
 };

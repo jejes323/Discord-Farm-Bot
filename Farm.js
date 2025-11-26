@@ -11,6 +11,7 @@ const {
 // 데이터베이스 모듈 import
 const { userInfo, seeds } = require('./database');
 const { handleMyInfo } = require('./myInfo');
+const { handleFarm, handleFieldSelect } = require('./play');
 
 // Discord 클라이언트 생성
 const client = new Client({
@@ -81,13 +82,17 @@ client.on('interactionCreate', async (interaction) => {
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isButton()) return;
 
+    // 밭 선택 처리 (field_1 ~ field_5)
+    if (interaction.customId.startsWith('field_')) {
+        const fieldId = parseInt(interaction.customId.split('_')[1]);
+        await handleFieldSelect(interaction, fieldId);
+        return;
+    }
+
     // 각 버튼에 대한 응답
     switch (interaction.customId) {
         case 'farm':
-            await interaction.reply({
-                content: '🌾 농사 기능이 선택되었습니다!',
-                ephemeral: true
-            });
+            await handleFarm(interaction);
             break;
         case 'shop':
             await interaction.reply({
