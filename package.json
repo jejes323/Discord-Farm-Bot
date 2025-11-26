@@ -1,0 +1,26 @@
+{
+  "name": "discord-farm-bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "Farm.js",
+  "scripts": {
+    "start": "node Farm.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jejes323/Discord-Farm-Bot.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jejes323/Discord-Farm-Bot/issues"
+  },
+  "homepage": "https://github.com/jejes323/Discord-Farm-Bot#readme",
+  "dependencies": {
+    "better-sqlite3": "^12.4.6",
+    "discord.js": "^14.25.1",
+    "dotenv": "^17.2.3"
+  }
+}
