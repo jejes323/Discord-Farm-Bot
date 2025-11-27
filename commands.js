@@ -7,6 +7,26 @@ const commands = [
         description: '농장 봇의 메인 메뉴를 표시합니다 (관리자 전용)',
         default_member_permissions: PermissionFlagsBits.Administrator.toString(),
     },
+    {
+        name: '돈지급',
+        description: '사용자에게 돈을 지급합니다 (관리자 전용)',
+        default_member_permissions: PermissionFlagsBits.Administrator.toString(),
+        options: [
+            {
+                name: '사용자',
+                description: '돈을 받을 사용자',
+                type: ApplicationCommandOptionType.User,
+                required: true,
+            },
+            {
+                name: '금액',
+                description: '지급할 금액',
+                type: ApplicationCommandOptionType.Integer,
+                required: true,
+                min_value: 1,
+            },
+        ],
+    },
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);

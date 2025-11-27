@@ -6,7 +6,8 @@ const {
     StringSelectMenuBuilder,
     StringSelectMenuOptionBuilder
 } = require('discord.js');
-const { fields, inventory } = require('./database');
+const { fields } = require('./database');
+const { SEEDS, formatGrowTime } = require('./seedData');
 
 async function handleFarm(interaction) {
     const userId = interaction.user.id;
@@ -70,31 +71,65 @@ async function handleFarm(interaction) {
 
 async function handleFieldSelect(interaction, fieldId) {
     const userId = interaction.user.id;
-    const userSeeds = inventory.getUserInventory(userId);
+    const { seeds } = require('./database');
 
-    // 보유한 씨앗이 없는 경우
-    if (userSeeds.length === 0) {
-        const noSeedEmbed = new EmbedBuilder()
-            .setColor('#FF0000')
-            .setTitle('❌ 씨앗이 없습니다!')
-            .setDescription('보유한 씨앗이 없습니다.\n상점에서 씨앗을 구매해주세요!');
+    // 해당 밭에 심어진 씨앗 확인
+    const db = require('./database').db;
+    const stmt = db.prepare('SELECT * FROM seeds WHERE user_id = ? AND field_id = ?');
+    const plantedSeed = stmt.get(userId, fieldId);
 
-        return interaction.update({
-            content: '',
-            embeds: [noSeedEmbed],
-            components: []
-        });
+    // 재배 중인 경우
+    if (plantedSeed) {
+        const seedData = SEEDS[plantedSeed.seed_name];
+        const plantTime = plantedSeed.plant_time;
+        const growTimeMs = seedData.growTime * 60 * 1000;
+        const harvestTime = plantTime + growTimeMs;
+        const now = Date.now();
+        const remainingMs = harvestTime - now;
+
+        if (remainingMs > 0) {
+            // 남은 시간 계산
+            const totalSeconds = Math.ceil(remainingMs / 1000);
+            const days = Math.floor(totalSeconds / 86400);
+            const hours = Math.floor((totalSeconds % 86400) / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+
+            let timeString = '';
+
+            if (days > 0) {
+                timeString = `${days}일`;
+                if (hours > 0) timeString += ` ${hours}시간`;
+                if (minutes > 0) timeString += ` ${minutes}분`;
+            } else if (hours > 0) {
+                timeString = `${hours}시간`;
+                if (minutes > 0) timeString += ` ${minutes}분`;
+                if (seconds > 0) timeString += ` ${seconds}초`;
+            } else if (minutes > 0) {
+                timeString = `${minutes}분`;
+                if (seconds > 0) timeString += ` ${seconds}초`;
+            } else {
+                timeString = `${seconds}초`;
+            }
+
+            return interaction.update({
+                content: `🌱 **밭 ${fieldId}**에는 현재 ${seedData.emoji} **${plantedSeed.seed_name}**이(가) 재배 중입니다.\n⏰ 남은 시간: **${timeString}**`,
+                embeds: [],
+                components: []
+            });
+        }
     }
 
-    // 씨앗 선택 드롭다운 생성
+    // 빈 밭인 경우 - 씨앗 선택 드롭다운 생성
     const selectMenu = new StringSelectMenuBuilder()
         .setCustomId(`plant_${fieldId}`)
         .setPlaceholder('심을 씨앗을 선택해주세요')
         .addOptions(
-            userSeeds.map(seed =>
+            Object.values(SEEDS).map(seed =>
                 new StringSelectMenuOptionBuilder()
-                    .setLabel(`${seed.item_name} (보유: ${seed.quantity}개)`)
-                    .setValue(seed.item_name)
+                    .setLabel(`${seed.emoji} ${seed.name}`)
+                    .setDescription(`성장: ${formatGrowTime(seed.growTime)} | 씨앗: ${seed.seedPrice}원 | 수확: ${seed.harvestPrice}원 | EXP: ${seed.exp}`)
+                    .setValue(seed.name)
             )
         );
 
