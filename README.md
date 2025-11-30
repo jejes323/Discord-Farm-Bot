@@ -3,6 +3,60 @@
 
 버튼 기반 UI, 자동 수확 시스템, 이미지 기반 프로필 카드 등 다양한 기능을 제공합니다.
 
+## 🧱 프로젝트 구조
+```
+📁 project/
+│
+├── index.js                # 봇 실행 파일
+│
+├── commands/               # Slash 명령어 모음
+│   ├── menu.js             # /메뉴 (메인 UI)
+│   ├── money.js            # /돈지급 (관리자 명령어)
+│   └── ...                 
+│
+├── modules/                # 기능 모듈
+│   ├── farming/            # 농사 시스템
+│   │   ├── startFarm.js
+│   │   ├── checkFarm.js
+│   │   ├── autoHarvest.js
+│   │   └── farmUtils.js
+│   │
+│   ├── shop/               # 상점 시스템
+│   │   ├── buyField.js
+│   │   └── shopUtils.js
+│   │
+│   └── user/               # 유저 정보 처리
+│       ├── getUserInfo.js
+│       └── updateUser.js
+│
+├── utils/
+│   ├── embed.js            # 공통 임베드 템플릿
+│   ├── buttons.js          # 공통 버튼 생성
+│   ├── imageGenerator.js   # 프로필 이미지 렌더링(canvas)
+│   └── time.js             # 쿨타임 계산
+│
+├── database/
+│   ├── db.js               # DB 연결
+│   └── models/             # DB 모델
+│       ├── User.js
+│       ├── Field.js
+│       └── Seed.js
+│
+├── assets/
+│   ├── fonts/              # 이미지 렌더링용 폰트
+│   └── images/             # UI 이미지, 아이콘
+│
+├── config.json             # 환경설정 (토큰, DB정보 등)
+└── package.json
+```
+
+## 🛠 기술 스택
+- Node.js — 메인 런타임
+- discord.js v14 — 디스코드 봇 フ레임워크
+- Canvas / @napi-rs/canvas
+  - 사용자 내정보 이미지 카드 생성
+  - 프로필 사진 렌더링 및 그라데이션/도형 그리기
+
 ## 🚀 주요 기능
 ### 🌱 농사 시스템
 주요 기능
@@ -15,10 +69,10 @@
 	- 남은 시간 확인 가능
 - 자동 수확
   - 봇이꺼져도 DB에 쿨타임 저장
-	- 쿨타임 도달 시 개인 메시지로 자동 알림
+  - 쿨타임 도달 시 개인 메시지로 자동 알림
   - 획득 골드
-	-	경험치
-	-	기타 보상
+  - 경험치
+  - 기타 보상
 
 ### 🛒 상점 시스템
 - 밭 구매 가능
@@ -61,3 +115,4 @@ node index.js
 2025.11.30
 - 내정보
   - 이미지로 사용자의 정보 표기
+
