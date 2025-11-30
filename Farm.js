@@ -129,10 +129,6 @@ client.on('interactionCreate', async (interaction) => {
                     .setLabel('🏪 상점')
                     .setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder()
-                    .setCustomId('weather')
-                    .setLabel('🌤️ 날씨')
-                    .setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder()
                     .setCustomId('myinfo')
                     .setLabel('👤 내정보')
                     .setStyle(ButtonStyle.Secondary)
@@ -256,12 +252,6 @@ client.on('interactionCreate', async (interaction) => {
             break;
         case 'cancel_buy_field':
             await handleCancelBuyField(interaction);
-            break;
-        case 'weather':
-            await interaction.reply({
-                content: '🌤️ 날씨 기능이 선택되었습니다!',
-                ephemeral: true
-            });
             break;
         case 'myinfo':
             await handleMyInfo(interaction);
